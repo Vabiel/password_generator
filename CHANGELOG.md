@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-06
+
 ### Added
 
 - `--version` option for the command line; the version is also shown in the window title
 - The version number is kept in a single `VERSION` file; the release build fails if the tag does not match it
+- Release notes on GitHub are taken from this changelog
 
 ### Fixed
 
@@ -29,5 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - App icon
 - Ready-to-run apps for macOS (Apple Silicon), Windows and Linux, built by GitHub Actions on each version tag
 
-[Unreleased]: https://github.com/Vabiel/password_generator/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Vabiel/password_generator/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Vabiel/password_generator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Vabiel/password_generator/releases/tag/v1.0.0
