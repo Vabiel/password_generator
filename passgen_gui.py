@@ -2,6 +2,7 @@
 """Графический интерфейс генератора паролей (tkinter, без зависимостей)."""
 
 import json
+import os
 import sys
 import tkinter as tk
 from pathlib import Path
@@ -11,12 +12,28 @@ from i18n import DEFAULT_LANGUAGE, LANGUAGES, STRINGS
 from passgen import CHARSETS, generate_password
 
 FONT_SIZE = 14
-MONO = ("Menlo", FONT_SIZE)
+IS_MAC = sys.platform == "darwin"
+IS_WINDOWS = sys.platform == "win32"
 
-if sys.platform == "darwin":
-    SETTINGS_FILE = Path.home() / "Library/Application Support/passgen/settings.json"
+# В сборке PyInstaller файлы лежат во временной папке sys._MEIPASS, иначе — рядом со скриптом
+BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+ICON_FILE = BASE_DIR / "assets" / "icon.png"
+
+if IS_MAC:
+    SETTINGS_DIR = Path.home() / "Library/Application Support/passgen"
+elif IS_WINDOWS:
+    SETTINGS_DIR = Path(os.environ.get("APPDATA", Path.home())) / "passgen"
 else:
-    SETTINGS_FILE = Path.home() / ".config/passgen/settings.json"
+    SETTINGS_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "passgen"
+SETTINGS_FILE = SETTINGS_DIR / "settings.json"
+
+# Моноширинный шрифт для паролей: на каждой системе свой, в Linux — системный по умолчанию
+if IS_MAC:
+    MONO = ("Menlo", FONT_SIZE)
+elif IS_WINDOWS:
+    MONO = ("Consolas", FONT_SIZE)
+else:
+    MONO = "TkFixedFont"
 
 
 def load_settings() -> dict:
@@ -57,13 +74,22 @@ class ScrollFrame(ttk.Frame):
         )
         self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfigure(window, width=e.width))
 
-        # Колесо мыши работает, только когда курсор над списком
-        self.bind("<Enter>", lambda _e: self.bind_all("<MouseWheel>", self._on_wheel))
-        self.bind("<Leave>", lambda _e: self.unbind_all("<MouseWheel>"))
+        # Колесо мыши работает, только когда курсор над списком.
+        # В Linux со старым Tk колесо приходит как кнопки 4 и 5, а не MouseWheel.
+        self.bind("<Enter>", lambda _e: self._bind_wheel(True))
+        self.bind("<Leave>", lambda _e: self._bind_wheel(False))
+
+    def _bind_wheel(self, on: bool) -> None:
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            if on:
+                self.bind_all(sequence, self._on_wheel)
+            else:
+                self.unbind_all(sequence)
 
     def _on_wheel(self, event: tk.Event) -> None:
         if self.inner.winfo_height() > self.canvas.winfo_height():
-            self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+            up = event.num == 4 or (event.num != 5 and event.delta > 0)
+            self.canvas.yview_scroll(-1 if up else 1, "units")
 
     def clear(self) -> None:
         for child in self.inner.winfo_children():
@@ -79,9 +105,10 @@ class App(ttk.Frame):
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
 
-        for name in ("TkDefaultFont", "TkTextFont"):
+        for name in ("TkDefaultFont", "TkTextFont", "TkFixedFont"):
             font.nametofont(name).configure(size=FONT_SIZE)
         ttk.Style().configure("TLabelframe.Label", font=("TkDefaultFont", FONT_SIZE, "bold"))
+        self._set_window_icon()
 
         self.settings = load_settings()
         lang = self.settings.get("language")
@@ -113,10 +140,18 @@ class App(ttk.Frame):
         self.bind("<Configure>", lambda e: status_label.configure(wraplength=e.width - 28))
 
         root.bind("<Return>", lambda _e: self.generate())
-        root.bind("<Command-s>", lambda _e: self.save())
+        root.bind("<Command-s>" if IS_MAC else "<Control-s>", lambda _e: self.save())
         self._fix_window_size()
         self.apply_language()
         self.generate()
+
+    def _set_window_icon(self) -> None:
+        # Иконка в заголовке окна и на панели задач (Windows, Linux), в Dock при запуске скриптом
+        try:
+            self.icon = tk.PhotoImage(file=ICON_FILE).subsample(4)  # 1024 → 256 px
+            self.root.iconphoto(True, self.icon)
+        except tk.TclError:
+            pass  # Нет файла или старый Tk без PNG — останется стандартная иконка
 
     def _fix_window_size(self) -> None:
         """Задаёт размер окна по самому широкому языку, чтобы оно не прыгало при переключении."""
@@ -280,6 +315,14 @@ class App(ttk.Frame):
 
 
 if __name__ == "__main__":
+    if IS_WINDOWS:
+        # Без этого Windows растягивает окно на экранах с масштабом 125–200 %, и текст размыт
+        try:
+            import ctypes
+
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except (AttributeError, OSError):
+            pass
     root = tk.Tk()
     App(root)
     root.mainloop()
