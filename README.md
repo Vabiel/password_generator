@@ -126,13 +126,17 @@ assets/icon.png  # App icon
 The apps are built with [PyInstaller](https://pyinstaller.org) by GitHub Actions
 (`.github/workflows/release.yml`) on macOS, Windows and Linux.
 
-- **Release:** update the number in `VERSION` and add the changes to `CHANGELOG.md`, commit,
-  then push a matching tag. The workflow builds all three apps and attaches them to a new release.
+- **Release:** update the number in `VERSION`, rename `## [Unreleased]` in `CHANGELOG.md`
+  to `## [X.Y.Z] - YYYY-MM-DD` (and add a new empty `## [Unreleased]` above it), commit,
+  then push a matching tag. The workflow builds all three apps and creates a release.
+  Its description is the version's section from `CHANGELOG.md`
+  followed by `.github/release-notes-footer.md` (downloads and known issues).
   ```sh
   git tag "v$(cat VERSION)"
   git push origin "v$(cat VERSION)"
   ```
-  The build fails if the tag does not match `VERSION` (for example, tag `v1.1.0` with `1.0.1` in the file).
+  The build fails if the tag does not match `VERSION` (for example, tag `v1.1.0` with `1.0.1` in the file)
+  or if `CHANGELOG.md` has no section for that version.
 - **Test build:** run the workflow manually from the *Actions* tab. The files appear under the run's *Artifacts*.
 
 To build locally (PyInstaller and Pillow are needed for building only):

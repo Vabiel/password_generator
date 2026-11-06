@@ -50,6 +50,11 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match VERSION file ($VERSION). Expected tag v$VERSION."
             exit 1
           fi
+          # Описание релиза берётся из CHANGELOG.md — проверяем заранее, до долгой сборки
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]] && ! .github/scripts/release-notes.sh "$VERSION" > /dev/null; then
+            echo "::error::Add a '## [$VERSION] - YYYY-MM-DD' section to CHANGELOG.md before tagging."
+            exit 1
+          fi
 
       - name: Check Python and tkinter
         run: |
@@ -105,6 +110,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      # Раздел версии из CHANGELOG.md + .github/release-notes-footer.md
+      - name: Prepare release notes
+        run: .github/scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > release-notes.md
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -113,4 +124,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
+          body_path: release-notes.md
+          # GitHub добавит в конец ссылку «Full Changelog» на сравнение с прошлым релизом
           generate_release_notes: true
