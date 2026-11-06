@@ -3,6 +3,10 @@
 A small, dependency-free password generator written in pure Python.
 Use it from the terminal or through a simple desktop window.
 
+<p align="center">
+  <img src="preview/preview.png" alt="Password Generator window on macOS" width="420">
+</p>
+
 - Choose character sets: digits, uppercase letters, lowercase letters, special characters (`% * ) ? @ # $ ~`)
 - Every password contains at least one character from each selected set
 - Set the password length (default: 8) and how many passwords to generate (default: 5)
