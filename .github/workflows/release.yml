@@ -1,0 +1,96 @@
+name: Build and release
+
+# Сборка по тегу вида v1.0 публикует релиз; ручной запуск просто собирает файлы для проверки
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.14"
+  APP_NAME: Password Generator
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macOS
+            runner: macos-latest       # Apple Silicon
+          - os: Windows
+            runner: windows-latest
+          - os: Linux
+            runner: ubuntu-22.04       # старый glibc — бинарник запустится на большем числе дистрибутивов
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Tk libraries (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libtk8.6
+
+      - name: Check Python and tkinter
+        run: |
+          python --version
+          python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          python passgen.py -n 1
+
+      # Только для сборки: сама программа по-прежнему без зависимостей.
+      # Pillow нужен PyInstaller, чтобы сделать из PNG иконку .icns / .ico
+      - name: Install build tools
+        run: python -m pip install pyinstaller==6.22.3 pillow==13.0.0
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --noconfirm --windowed --name "$APP_NAME" \
+            --icon assets/icon.png --add-data "assets/icon.png:assets" \
+            --osx-bundle-identifier com.vabiel.passgen passgen_gui.py
+          cd dist && ditto -c -k --keepParent "$APP_NAME.app" ../PasswordGenerator-macOS.zip
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name "$env:APP_NAME" `
+            --icon assets/icon.png --add-data "assets/icon.png:assets" passgen_gui.py
+          Compress-Archive -Path "dist/$env:APP_NAME.exe" -DestinationPath PasswordGenerator-Windows.zip
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name password-generator \
+            --add-data "assets/icon.png:assets" passgen_gui.py
+          tar -czf PasswordGenerator-Linux.tar.gz -C dist password-generator
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PasswordGenerator-${{ matrix.os }}
+          path: PasswordGenerator-*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
