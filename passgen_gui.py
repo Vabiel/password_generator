@@ -9,15 +9,13 @@ from pathlib import Path
 from tkinter import filedialog, font, ttk
 
 from i18n import DEFAULT_LANGUAGE, LANGUAGES, STRINGS
-from passgen import CHARSETS, generate_password
+from passgen import APP_DIR, CHARSETS, VERSION, generate_password
 
 FONT_SIZE = 14
 IS_MAC = sys.platform == "darwin"
 IS_WINDOWS = sys.platform == "win32"
 
-# В сборке PyInstaller файлы лежат во временной папке sys._MEIPASS, иначе — рядом со скриптом
-BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-ICON_FILE = BASE_DIR / "assets" / "icon.png"
+ICON_FILE = APP_DIR / "assets" / "icon.png"
 
 if IS_MAC:
     SETTINGS_DIR = Path.home() / "Library/Application Support/passgen"
@@ -232,7 +230,7 @@ class App(ttk.Frame):
         self.apply_language()
 
     def apply_language(self) -> None:
-        self.root.title(self.t("title"))
+        self.root.title(f"{self.t('title')} {VERSION}")
         for widget, key in self.translatable:
             widget.configure(text=self.t(key))
         for button in self.copy_buttons:

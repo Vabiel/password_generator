@@ -39,10 +39,23 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libtk8.6
 
+      # Номер версии задаётся только в файле VERSION; тег релиза обязан с ним совпадать
+      - name: Check version
+        shell: bash
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Version: $VERSION"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION file ($VERSION). Expected tag v$VERSION."
+            exit 1
+          fi
+
       - name: Check Python and tkinter
         run: |
           python --version
-          python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          python -c "import tkinter; print('Tk', tkinter.Tcl().call('info', 'patchlevel'))"
+          python passgen.py --version
           python passgen.py -n 1
 
       # Только для сборки: сама программа по-прежнему без зависимостей.
@@ -54,8 +67,14 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           pyinstaller --noconfirm --windowed --name "$APP_NAME" \
-            --icon assets/icon.png --add-data "assets/icon.png:assets" \
+            --icon assets/icon.png --add-data "assets/icon.png:assets" --add-data "VERSION:." \
             --osx-bundle-identifier com.vabiel.passgen passgen_gui.py
+          # Версия для «Свойств» в Finder. После правки Info.plist подпись приложения
+          # становится недействительной, поэтому подписываем заново (локальная подпись, без Apple ID)
+          PLIST="dist/$APP_NAME.app/Contents/Info.plist"
+          plutil -replace CFBundleShortVersionString -string "$VERSION" "$PLIST"
+          plutil -replace CFBundleVersion -string "$VERSION" "$PLIST"
+          codesign --force --deep --sign - "dist/$APP_NAME.app"
           cd dist && ditto -c -k --keepParent "$APP_NAME.app" ../PasswordGenerator-macOS.zip
 
       - name: Build (Windows)
@@ -63,14 +82,15 @@ jobs:
         shell: pwsh
         run: |
           pyinstaller --noconfirm --onefile --windowed --name "$env:APP_NAME" `
-            --icon assets/icon.png --add-data "assets/icon.png:assets" passgen_gui.py
+            --icon assets/icon.png --add-data "assets/icon.png:assets" --add-data "VERSION:." `
+            passgen_gui.py
           Compress-Archive -Path "dist/$env:APP_NAME.exe" -DestinationPath PasswordGenerator-Windows.zip
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
           pyinstaller --noconfirm --onefile --windowed --name password-generator \
-            --add-data "assets/icon.png:assets" passgen_gui.py
+            --add-data "assets/icon.png:assets" --add-data "VERSION:." passgen_gui.py
           tar -czf PasswordGenerator-Linux.tar.gz -C dist password-generator
 
       - uses: actions/upload-artifact@v4

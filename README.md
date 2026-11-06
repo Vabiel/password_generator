@@ -69,6 +69,7 @@ python3 passgen.py [options]
 | `-s`, `--special` | Include special characters `%*)?@#$~` |
 | `-l`, `--length N` | Password length (default: 8) |
 | `-n`, `--count N` | Number of passwords (default: 5) |
+| `-V`, `--version` | Show the version |
 | `-h`, `--help` | Show help |
 
 If no character set is selected, all four are used.
@@ -125,11 +126,13 @@ assets/icon.png  # App icon
 The apps are built with [PyInstaller](https://pyinstaller.org) by GitHub Actions
 (`.github/workflows/release.yml`) on macOS, Windows and Linux.
 
-- **Release:** push a version tag. The workflow builds all three apps and attaches them to a new release.
+- **Release:** update the number in `VERSION` and add the changes to `CHANGELOG.md`, commit,
+  then push a matching tag. The workflow builds all three apps and attaches them to a new release.
   ```sh
-  git tag v1.0.0
-  git push origin v1.0.0
+  git tag "v$(cat VERSION)"
+  git push origin "v$(cat VERSION)"
   ```
+  The build fails if the tag does not match `VERSION` (for example, tag `v1.1.0` with `1.0.1` in the file).
 - **Test build:** run the workflow manually from the *Actions* tab. The files appear under the run's *Artifacts*.
 
 To build locally (PyInstaller and Pillow are needed for building only):
@@ -138,7 +141,7 @@ To build locally (PyInstaller and Pillow are needed for building only):
 python3 -m venv .venv && source .venv/bin/activate
 pip install pyinstaller pillow
 pyinstaller --windowed --name "Password Generator" --icon assets/icon.png \
-  --add-data "assets/icon.png:assets" passgen_gui.py
+  --add-data "assets/icon.png:assets" --add-data "VERSION:." passgen_gui.py
 # Result: dist/Password Generator.app (macOS) or dist/Password Generator (Windows, Linux)
 ```
 
