@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--version` option for the command line; the version is also shown in the window title
 - The version number is kept in a single `VERSION` file; the release build fails if the tag does not match it
 
+### Fixed
+
+- The window no longer flickers on startup while its size is being calculated
+
 ## [1.0.0] - 2026-11-06
 
 ### Added

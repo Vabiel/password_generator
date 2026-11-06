@@ -99,6 +99,9 @@ class App(ttk.Frame):
     def __init__(self, root: tk.Tk) -> None:
         super().__init__(root, padding=14)
         self.root = root
+        # Окно скрыто, пока строится интерфейс и подбирается размер, иначе при запуске видно,
+        # как перебираются языки и меняется размер. Показываем уже готовым в конце __init__
+        root.withdraw()
         self.grid(sticky="nsew")
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
@@ -142,6 +145,8 @@ class App(ttk.Frame):
         self._fix_window_size()
         self.apply_language()
         self.generate()
+        root.update_idletasks()
+        root.deiconify()
 
     def _set_window_icon(self) -> None:
         # Иконка в заголовке окна и на панели задач (Windows, Linux), в Dock при запуске скриптом
