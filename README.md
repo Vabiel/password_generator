@@ -12,8 +12,28 @@ Use it from the terminal or through a simple desktop window.
 - Set the password length (default: 8) and how many passwords to generate (default: 5)
 - Uses the [`secrets`](https://docs.python.org/3/library/secrets.html) module, which is designed for generating secure passwords
 - No third-party packages, only the Python standard library
+- Ready-to-run apps for macOS, Windows and Linux
 
-## Requirements
+## Download
+
+Get the latest build from the [Releases](../../releases/latest) page. No Python required.
+
+| Platform | File | How to run |
+|---|---|---|
+| macOS (Apple Silicon) | `PasswordGenerator-macOS.zip` | Unzip and move **Password Generator.app** to *Applications* |
+| Windows 10/11 | `PasswordGenerator-Windows.zip` | Unzip and run **Password Generator.exe** |
+| Linux (x86-64) | `PasswordGenerator-Linux.tar.gz` | `tar -xzf PasswordGenerator-Linux.tar.gz && ./password-generator` |
+
+The apps are not signed, so the system warns you the first time you open them:
+
+- **macOS:** *“Password Generator” cannot be opened because Apple cannot check it for malicious software.*
+  Right-click the app, choose **Open**, then **Open** again. Or run once:
+  `xattr -dr com.apple.quarantine "/Applications/Password Generator.app"`
+- **Windows:** *Windows protected your PC* (SmartScreen). Click **More info → Run anyway**.
+
+## Run from source
+
+### Requirements
 
 | Mode | Python | Notes |
 |---|---|---|
@@ -35,7 +55,7 @@ Check that it is available:
 python3 -c "import tkinter; print(tkinter.TkVersion)"
 ```
 
-## Command line
+### Command line
 
 ```sh
 python3 passgen.py [options]
@@ -54,7 +74,7 @@ python3 passgen.py [options]
 If no character set is selected, all four are used.
 The length must be at least the number of selected sets.
 
-### Examples
+#### Examples
 
 ```sh
 # 5 passwords of 8 characters, all character sets
@@ -70,7 +90,7 @@ python3 passgen.py -d -l 6 -n 1
 python3 passgen.py -l 12 -n 20 > passwords.txt
 ```
 
-## Desktop window
+### Desktop window
 
 ```sh
 python3 passgen_gui.py
@@ -79,13 +99,14 @@ python3 passgen_gui.py
 - Toggle character sets and set the length (1–128) and count (1–100)
 - **Generate** (or press <kbd>Enter</kbd>) creates a new list
 - **Copy** next to each password copies just that one; **Copy all** copies the whole list
-- **Save to file…** (or <kbd>⌘</kbd>+<kbd>S</kbd> on macOS) writes all passwords to a text file, one per line
+- **Save to file…** (<kbd>⌘</kbd>+<kbd>S</kbd> on macOS, <kbd>Ctrl</kbd>+<kbd>S</kbd> on Windows and Linux) writes all passwords to a text file, one per line
 - Switch the interface language between **English**, **Русский** and **Srpski** from the drop-down in the top-right corner
 
 The selected language is remembered in:
 
 - macOS: `~/Library/Application Support/passgen/settings.json`
-- Linux / other: `~/.config/passgen/settings.json`
+- Windows: `%APPDATA%\passgen\settings.json`
+- Linux: `~/.config/passgen/settings.json`
 
 English is used when no setting has been saved yet.
 
@@ -95,6 +116,30 @@ English is used when no setting has been saved yet.
 passgen.py       # Password generation logic and the command-line interface
 passgen_gui.py   # Desktop window (tkinter)
 i18n.py          # Interface translations
+assets/icon.png  # App icon
+.github/workflows/release.yml  # Builds the apps
+```
+
+## Building the apps
+
+The apps are built with [PyInstaller](https://pyinstaller.org) by GitHub Actions
+(`.github/workflows/release.yml`) on macOS, Windows and Linux.
+
+- **Release:** push a version tag. The workflow builds all three apps and attaches them to a new release.
+  ```sh
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+- **Test build:** run the workflow manually from the *Actions* tab. The files appear under the run's *Artifacts*.
+
+To build locally (PyInstaller and Pillow are needed for building only):
+
+```sh
+python3 -m venv .venv && source .venv/bin/activate
+pip install pyinstaller pillow
+pyinstaller --windowed --name "Password Generator" --icon assets/icon.png \
+  --add-data "assets/icon.png:assets" passgen_gui.py
+# Result: dist/Password Generator.app (macOS) or dist/Password Generator (Windows, Linux)
 ```
 
 ## Adding a language
